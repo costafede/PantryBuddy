@@ -3,7 +3,6 @@ import SwiftUI
 import UIKit
 
 struct ManualProductEntryView: View {
-
     @Environment(\.modelContext)
     private var modelContext
 
@@ -20,8 +19,7 @@ struct ManualProductEntryView: View {
     @State private var packageQuantity = ""
 
     @State private var packageCount = 1
-    @State private var storageLocation =
-        "Dispensa"
+    @State private var storageLocation = "Dispensa"
 
     @State private var trackingMode:
         InventoryTrackingMode = .packages
@@ -39,12 +37,15 @@ struct ManualProductEntryView: View {
         ) ?? Date()
 
     @State private var isSaving = false
+    @State private var hasSavedProduct = false
 
-    @State
-    private var showNotificationSettingsAlert = false
+    @State private var showProductCamera = false
+    @State private var capturedPhoto: UIImage?
+    @State private var localImageData: Data?
+    @State private var photoErrorMessage: String?
 
-    @State
-    private var showNotificationFailureAlert = false
+    @State private var showNotificationSettingsAlert = false
+    @State private var showNotificationFailureAlert = false
 
     @State private var errorMessage: String?
 
@@ -88,39 +89,14 @@ struct ManualProductEntryView: View {
                 PantryTheme.background
                     .ignoresSafeArea()
 
-                ScrollView(
-                    showsIndicators: false
-                ) {
+                ScrollView(showsIndicators: false) {
                     VStack(spacing: 18) {
-                        Image(
-                            systemName:
-                                "square.and.pencil"
-                        )
-                        .font(
-                            .system(
-                                size: 38,
-                                weight: .semibold
-                            )
-                        )
-                        .foregroundStyle(
-                            PantryTheme.forest
-                        )
-                        .frame(
-                            width: 90,
-                            height: 90
-                        )
-                        .background(
-                            PantryTheme.forest
-                                .opacity(0.10),
-                            in: Circle()
-                        )
-                        .padding(.top, 10)
+                        optionalPhotoCard
 
                         VStack(spacing: 14) {
                             PBTextField(
                                 title: "Nome prodotto",
-                                placeholder:
-                                    "Es. Pesto genovese",
+                                placeholder: "Es. Pesto genovese",
                                 text: $name
                             )
 
@@ -131,8 +107,7 @@ struct ManualProductEntryView: View {
                             )
 
                             PBTextField(
-                                title:
-                                    "Quantità confezione",
+                                title: "Quantità confezione",
                                 placeholder: "Es. 500 g",
                                 text: $packageQuantity
                             )
@@ -143,21 +118,12 @@ struct ManualProductEntryView: View {
                             ) {
                                 Text("Barcode")
                                     .font(.caption)
-                                    .foregroundStyle(
-                                        .secondary
-                                    )
+                                    .foregroundStyle(.secondary)
 
                                 Text(barcode)
-                                    .font(
-                                        .caption
-                                            .monospaced()
-                                    )
-                                    .foregroundStyle(
-                                        PantryTheme.ink
-                                    )
-                                    .textSelection(
-                                        .enabled
-                                    )
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(PantryTheme.ink)
+                                    .textSelection(.enabled)
                             }
                             .frame(
                                 maxWidth: .infinity,
@@ -174,27 +140,20 @@ struct ManualProductEntryView: View {
                         )
 
                         PBInventoryTrackingEditor(
-                            trackingMode:
-                                $trackingMode,
-                            unitsPerPackage:
-                                $unitsPerPackage,
-                            inventoryUnitName:
-                                $inventoryUnitName
+                            trackingMode: $trackingMode,
+                            unitsPerPackage: $unitsPerPackage,
+                            inventoryUnitName: $inventoryUnitName
                         )
 
                         PBQuantityControl(
-                            title:
-                                "Confezioni da aggiungere",
-                            quantity:
-                                $packageCount,
+                            title: "Confezioni da aggiungere",
+                            quantity: $packageCount,
                             minimum: 1
                         )
 
                         Text(amountPreviewText)
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(
-                                PantryTheme.forest
-                            )
+                            .foregroundStyle(PantryTheme.forest)
                             .multilineTextAlignment(.center)
 
                         PBStoragePicker(
@@ -202,10 +161,8 @@ struct ManualProductEntryView: View {
                         )
 
                         PBExpirationPicker(
-                            hasExpirationDate:
-                                $hasExpirationDate,
-                            expirationDate:
-                                $expirationDate
+                            hasExpirationDate: $hasExpirationDate,
+                            expirationDate: $expirationDate
                         )
 
                         if let errorMessage {
@@ -216,11 +173,11 @@ struct ManualProductEntryView: View {
 
                         PBPrimaryButton(
                             title: "Salva prodotto",
-                            systemImage:
-                                "checkmark.circle.fill",
+                            systemImage: "checkmark.circle.fill",
                             disabled:
                                 cleanName.isEmpty
                                 || isSaving
+                                || hasSavedProduct
                         ) {
                             saveProduct()
                         }
@@ -231,9 +188,7 @@ struct ManualProductEntryView: View {
                 }
             }
             .navigationTitle("Nuovo prodotto")
-            .navigationBarTitleDisplayMode(
-                .inline
-            )
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(
                     placement: .topBarLeading
@@ -241,20 +196,35 @@ struct ManualProductEntryView: View {
                     Button("Annulla") {
                         dismiss()
                     }
+                    .disabled(isSaving)
                 }
             }
         }
+        .interactiveDismissDisabled(isSaving)
         .tint(PantryTheme.forest)
+        .fullScreenCover(
+            isPresented: $showProductCamera,
+            onDismiss: prepareCapturedPhoto
+        ) {
+            ProductPhotoCameraView(
+                onImageCaptured: { image in
+                    capturedPhoto = image
+                    showProductCamera = false
+                },
+                onCancel: {
+                    capturedPhoto = nil
+                    showProductCamera = false
+                }
+            )
+            .ignoresSafeArea()
+        }
         .alert(
             "Notifiche disattivate",
-            isPresented:
-                $showNotificationSettingsAlert
+            isPresented: $showNotificationSettingsAlert
         ) {
             Button("Apri Impostazioni") {
                 if let settingsURL = URL(
-                    string:
-                        UIApplication
-                            .openSettingsURLString
+                    string: UIApplication.openSettingsURLString
                 ) {
                     openURL(settingsURL)
                 }
@@ -262,10 +232,7 @@ struct ManualProductEntryView: View {
                 dismiss()
             }
 
-            Button(
-                "Non ora",
-                role: .cancel
-            ) {
+            Button("Non ora", role: .cancel) {
                 dismiss()
             }
         } message: {
@@ -275,8 +242,7 @@ struct ManualProductEntryView: View {
         }
         .alert(
             "Prodotto salvato",
-            isPresented:
-                $showNotificationFailureAlert
+            isPresented: $showNotificationFailureAlert
         ) {
             Button("OK") {
                 dismiss()
@@ -288,9 +254,98 @@ struct ManualProductEntryView: View {
         }
     }
 
+    private var optionalPhotoCard: some View {
+        VStack(spacing: 12) {
+            Text("Foto (facoltativa)")
+                .font(.headline)
+                .foregroundStyle(PantryTheme.ink)
+
+            if let localImageData {
+                PBProductImage(
+                    imageURL: nil,
+                    localImageData: localImageData,
+                    size: 130
+                )
+            }
+
+            Button {
+                photoErrorMessage = nil
+                capturedPhoto = nil
+                showProductCamera = true
+            } label: {
+                Label(
+                    localImageData == nil
+                        ? "Aggiungi foto"
+                        : "Rifai foto",
+                    systemImage: "camera.fill"
+                )
+                .font(.subheadline.weight(.semibold))
+                .frame(maxWidth: .infinity)
+                .frame(minHeight: 44)
+            }
+            .buttonStyle(.bordered)
+            .tint(PantryTheme.forest)
+
+            if localImageData != nil {
+                Button(role: .destructive) {
+                    localImageData = nil
+                    photoErrorMessage = nil
+                } label: {
+                    Label(
+                        "Rimuovi foto",
+                        systemImage: "trash"
+                    )
+                    .font(.subheadline)
+                    .frame(minHeight: 44)
+                }
+                .buttonStyle(.borderless)
+            }
+
+            Text("Puoi salvare il prodotto anche senza foto.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            if let photoErrorMessage {
+                Text(photoErrorMessage)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .disabled(isSaving || hasSavedProduct)
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(
+            PantryTheme.card,
+            in: RoundedRectangle(cornerRadius: 22)
+        )
+    }
+
+    private func prepareCapturedPhoto() {
+        guard let image = capturedPhoto else {
+            return
+        }
+
+        capturedPhoto = nil
+
+        guard let data = ProductPhotoStorage.compressedData(
+            from: image
+        ) else {
+            photoErrorMessage =
+                "Non sono riuscito a preparare la foto. Puoi riprovare o salvare senza."
+            return
+        }
+
+        localImageData = data
+        photoErrorMessage = nil
+    }
+
     private func saveProduct() {
         guard !cleanName.isEmpty,
-              !isSaving else {
+              !isSaving,
+              !hasSavedProduct
+        else {
             return
         }
 
@@ -300,28 +355,21 @@ struct ManualProductEntryView: View {
         let newProduct = Product(
             barcode: barcode,
             name: cleanName,
-            brand:
-                brand.trimmingCharacters(
-                    in: .whitespacesAndNewlines
-                ),
-            packageQuantity:
-                packageQuantity
-                    .trimmingCharacters(
-                        in:
-                            .whitespacesAndNewlines
-                    ),
-            inventoryQuantity:
-                amountToAdd,
-            storageLocation:
-                storageLocation,
-            trackingMode:
-                trackingMode,
+            brand: brand.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ),
+            packageQuantity: packageQuantity.trimmingCharacters(
+                in: .whitespacesAndNewlines
+            ),
+            localImageData: localImageData,
+            inventoryQuantity: amountToAdd,
+            storageLocation: storageLocation,
+            trackingMode: trackingMode,
             unitsPerPackage:
                 trackingMode == .containedUnits
                     ? unitsPerPackage
                     : 1,
-            inventoryUnitName:
-                inventoryUnitName,
+            inventoryUnitName: inventoryUnitName,
             expirationDate:
                 hasExpirationDate
                     ? Calendar.current.startOfDay(
@@ -334,13 +382,11 @@ struct ManualProductEntryView: View {
 
         do {
             try modelContext.save()
+            hasSavedProduct = true
 
             Task { @MainActor in
-                await finishSaving(
-                    newProduct
-                )
+                await finishSaving(newProduct)
             }
-
         } catch {
             modelContext.rollback()
             isSaving = false
