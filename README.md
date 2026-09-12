@@ -1,389 +1,352 @@
 # PantryBuddy
 
-![Swift](https://img.shields.io/badge/Swift-iOS-orange)
+![Swift](https://img.shields.io/badge/Swift-6-orange)
 ![Platform](https://img.shields.io/badge/platform-iOS-lightgrey)
+![UI](https://img.shields.io/badge/UI-SwiftUI-blue)
+![Persistence](https://img.shields.io/badge/persistence-SwiftData-green)
 ![Status](https://img.shields.io/badge/status-active%20development-yellow)
 
-**PantryBuddy** is a native iOS application designed to simplify grocery shopping and pantry management.
+**PantryBuddy** is a native iOS app for managing groceries, tracking expiration dates, comparing purchase prices, and keeping a shopping list.
 
-The app combines **barcode scanning, receipt OCR, inventory tracking, expiration management, and price history** into a single workflow, allowing users to keep track of what they own, what they paid, where they bought it, and when it should be consumed.
+It brings together **barcode scanning, on-device receipt OCR, flexible inventory tracking, product photos, and local expiration reminders**.
 
-The project is currently under active development.
+The app separates two different questions:
 
----
+- **What do I have at home?** — the pantry.
+- **What did I pay, and where?** — the price catalog.
 
-## Overview
+Products can remain in the price catalog even when they are no longer in the pantry.
 
-Managing groceries usually involves information scattered across receipts, product packaging, supermarket apps, and memory.
-
-PantryBuddy aims to bring all of this information together.
-
-Users can add products by scanning their barcode or entering them manually, manage quantities and expiration dates, scan grocery receipts, associate receipt items with products in their pantry, and build a personal history of product prices across different stores.
-
-The goal is to make the pantry a structured and searchable digital inventory rather than just a list of products.
-
----
+> PantryBuddy is a personal project under active development. The interface is currently primarily in Italian, and prices are displayed in Norwegian kroner (NOK).
 
 ## Features
 
-### Pantry Management
+### Pantry and Storage Locations
 
-- Add and manage products stored in the pantry
-- Track product quantities
-- View product details
-- Update existing items
-- Merge duplicate product entries
-- Maintain a structured inventory of available products
+Organize products by where they are stored:
+
+- Pantry
+- Refrigerator
+- Freezer
+- All products
+
+Each product can include its name, brand, package size, image, storage location, available quantity, and expiration date.
+
+Removing a product from the pantry does not require deleting its catalog entry or purchase-price history.
+
+### Package and Individual-Unit Tracking
+
+Choose how to track each product:
+
+- **Packages** for products managed as whole containers.
+- **Individual units** for products such as eggs, wraps, or other countable items.
+
+For example, a package containing six wraps can be tracked by the number of wraps remaining instead of simply showing one package.
+
+The tracking mode is selected per product: counting every biscuit or slice is not required.
 
 ### Barcode Scanning
 
-- Scan product barcodes using the iPhone camera
-- Automatically identify supported products
-- Retrieve product information from external product databases
-- Fall back to manual entry when no product information is available
+Scan product barcodes using the iPhone camera.
 
-### OpenFoodFacts Integration
+PantryBuddy retrieves available product information through **Open Food Facts**, reducing manual entry when a matching product is available.
 
-PantryBuddy integrates with the **OpenFoodFacts API** to retrieve product information from scanned barcodes.
+When a product cannot be identified, users can enter its details manually or cancel the operation.
 
-This can reduce the amount of information that needs to be entered manually when adding common supermarket products.
+### Optional Product Photos
 
-### Manual Product Entry
+Add a personal photo when a product image is missing or needs replacing.
 
-Products that cannot be identified automatically can still be added manually.
+- Take a photo directly in the app.
+- Retake or remove a manually added photo.
+- Save a product without taking a photo.
+- Store personal product photos locally.
 
-This makes the application usable even when:
+Photography is optional and does not block product entry.
 
-- a barcode is unavailable
-- the product is not present in OpenFoodFacts
-- the user wants to create a custom pantry item
+Remote product images are cached in memory and on disk, allowing cached images to be reused when switching between pantry sections.
 
-### Expiration Tracking
+### Expiration Dates and Reminders
 
-- Store expiration dates for products
-- Identify products approaching their expiration date
-- Organize inventory based on product freshness
-- Help reduce unnecessary food waste
+Assign an optional expiration date to a product.
 
-### Receipt Scanning
+The app distinguishes between products that are:
 
-PantryBuddy can capture grocery receipts using the iPhone camera and process them through OCR.
+- Expired
+- Expiring today
+- Expiring soon
+- Not close to expiration
 
-The receipt workflow is designed to extract information such as:
+With notification permission, PantryBuddy can schedule local reminders three days before expiration and on the expiration date.
 
-- purchased items
-- product prices
-- store information
-- receipt data useful for matching purchases with pantry products
+Reminders are refreshed when relevant product information changes and cancelled when a product is no longer in stock.
 
-### Receipt OCR
+The current model stores one expiration date per product, rather than separate dates for individual packages or batches.
 
-Receipt text is processed locally using Apple's text-recognition technologies.
+### Receipt Scanning and On-Device OCR
 
-The extracted information is then normalized and prepared for matching with known products.
+Photograph a supermarket receipt and extract its text locally using Apple's Vision framework.
 
-### Receipt-to-Product Matching
+The receipt workflow attempts to identify:
 
-The app can associate products detected on a receipt with items stored in the pantry.
+- Supermarket name
+- Product descriptions
+- Prices
+- Purchase date
 
-Because receipt descriptions often differ significantly from actual product names, PantryBuddy includes dedicated matching logic to improve the association process.
+Users review the extracted information before saving.
 
-Users can review and correct matches when necessary.
+When a purchase date is available from the receipt, it can be used or corrected. Otherwise, the app uses the date and time at which prices are saved.
 
-### Price Tracking
+Receipt images are not uploaded to an external AI service for OCR.
 
-PantryBuddy keeps track of product purchase prices over time.
+### Receipt Matching and Catalog-Only Products
 
-For each product, users can build a history containing information such as:
+Receipt descriptions often differ from the names returned by barcode lookups.
 
-- purchase price
-- supermarket or store
-- purchase date
+PantryBuddy supports reviewing product associations and remembering confirmed receipt aliases for future purchases.
 
-This makes it possible to compare how the price of the same product changes across stores and over time.
+Receipt items can also become catalog-only products without being added to the pantry. This allows old receipts to contribute to price history even when their products are no longer at home.
 
-### Store Name Normalization
+Save guards help prevent repeated taps from saving the same operation multiple times.
 
-Supermarket names extracted from receipts may contain inconsistent formatting.
+### Price Catalog
 
-PantryBuddy normalizes store names so that different variations of the same supermarket can be treated consistently.
+Browse a separate, searchable product-price catalog.
 
-### Product Images
+Search by:
 
-The app supports product image management and local image caching to provide a more visual browsing experience without repeatedly retrieving the same resources.
+- Product name
+- Brand
+- Barcode
 
----
+Prices are grouped by supermarket. Each group shows:
 
-## Typical Workflow
+- Latest recorded price
+- Historical minimum
+- Historical maximum
+- Full saved price history with purchase dates
 
-A typical PantryBuddy workflow looks like this:
+New price observations do not replace earlier ones.
 
-1. The user buys groceries.
-2. Products are added by scanning their barcodes or entering them manually.
-3. PantryBuddy retrieves available product information automatically.
-4. Quantities and expiration dates are stored in the pantry.
-5. The user scans the supermarket receipt.
-6. OCR extracts receipt information.
-7. Receipt items are matched with products stored in the app.
-8. Purchase prices are associated with the corresponding products.
-9. Over time, PantryBuddy builds both an inventory history and a personal price database.
+Comparisons reflect recorded purchases, not live supermarket prices.
 
----
+### Duplicate Review and Product Merging
 
-## Tech Stack
+Review possible duplicates, including entries created through different workflows such as receipt scanning and barcode scanning.
 
-PantryBuddy is developed as a native iOS application using Apple's ecosystem.
+Users can:
 
-### Core Technologies
+- Confirm that entries represent the same product.
+- Merge their associated price history and receipt aliases.
+- Mark suggested pairs as different products.
+- Preserve relevant product information when merging.
 
-- **Swift**
-- **SwiftUI**
-- **Xcode**
-- Native iOS frameworks
-- Local data persistence
+Duplicate suggestions are assistive: similar descriptions do not necessarily mean two products are identical.
 
-### Camera and Scanning
+Supermarket-name normalization also helps group variations of the same store name consistently.
 
-The project uses native iOS camera capabilities for:
+### Shopping List
 
-- barcode scanning
-- product photography
-- receipt capture
+A dedicated shopping-list screen supports:
 
-### OCR
+- Adding free-text items.
+- Editing item names.
+- Marking items as purchased.
+- Separating pending and purchased items.
+- Deleting individual entries.
+- Clearing purchased items after confirmation.
 
-Apple's native computer vision and text-recognition technologies are used to process receipt images.
+The list is saved locally and remains available after reopening the app.
 
-This allows receipt recognition to be performed without relying on paid external AI APIs.
+It is currently a manual list, without automatic stock-based suggestions or sharing between devices.
 
-### External Data
+### Settings and Data Management
 
-Product information can be retrieved through:
+Manage the local archive through a dedicated settings screen.
 
-- **OpenFoodFacts API**
+Available tools include:
 
----
+- Removing products from the pantry while retaining catalog information.
+- Permanently deleting products and their associated records.
+- Exporting a JSON backup.
+- Importing a backup by merging or replacing the archive.
+- Exporting price history as CSV.
+- Checking and repairing archive inconsistencies.
+- Clearing the archive with confirmation.
 
-## Architecture
+Archive repair can address issues such as orphaned price records, invalid receipt aliases, and duplicate records left by earlier versions.
 
-The project separates user interface components from the services responsible for product recognition, receipt processing, inventory management, and data normalization.
+JSON backups include product information, inventory-tracking fields, expiration dates, personal product photos, price records, receipt aliases, and saved duplicate-review information.
 
-Some of the main components include:
+> The shopping list is stored separately and is not currently included in JSON backups. Downloaded remote-image cache files are also excluded; product image URLs are retained.
+
+### Adaptive Interface and Error Handling
+
+The SwiftUI interface adapts to different screen sizes and text settings.
+
+The app includes feedback for situations such as:
+
+- Camera permission being denied, with a link to Settings.
+- No internet connection.
+- Product lookup services being unavailable.
+- Receipt text being unreadable.
+- Backup validation or import failures.
+
+## Example Workflows
+
+### Add Groceries
+
+1. Scan a product barcode.
+2. Review retrieved information or enter missing details.
+3. Optionally take a product photo.
+4. Choose a storage location.
+5. Select package-based or individual-unit tracking.
+6. Optionally add an expiration date.
+7. Save and update the remaining quantity as the product is used.
+
+### Record Purchase Prices
+
+1. Photograph a receipt.
+2. Review the detected supermarket, date, descriptions, and prices.
+3. Associate receipt lines with existing products or create catalog entries.
+4. Save the price observations.
+5. Compare recorded prices across supermarkets in the price catalog.
+
+A receipt can be processed independently of the current pantry contents.
+
+## Technology
+
+- **Swift 6** — application language.
+- **SwiftUI** — interface and navigation.
+- **SwiftData** — local product, price, and receipt-alias persistence.
+- **AVFoundation** — camera and barcode-scanning functionality.
+- **UIKit** — camera integration and image handling.
+- **Vision** — on-device receipt text recognition.
+- **UserNotifications** — local expiration reminders.
+- **URLSession** — product and image requests.
+- **UserDefaults / AppStorage** — preferences and the local shopping list.
+- **Open Food Facts** — external product information.
+
+## Project Structure
+
+The main application sources currently live in the `PantryBuddy/` directory.
 
 ```text
 PantryBuddy/
-│
-├── PantryBuddyApp.swift
-├── ContentView.swift
-│
-├── Pantry
-│   ├── PantryView.swift
-│   ├── Product.swift
-│   ├── ProductDetailView.swift
-│   ├── KnownProductView.swift
-│   └── ManualProductEntryView.swift
-│
-├── Inventory
-│   ├── InventoryTrackingComponents.swift
-│   ├── ProductExpirationService.swift
-│   ├── ProductExpirationComponents.swift
-│   └── ProductMergeService.swift
-│
-├── Product Scanning
-│   ├── BarcodeScannerView.swift
-│   ├── OpenFoodFactsService.swift
-│   └── ProductPhotoCameraView.swift
-│
-├── Receipts
-│   ├── ReceiptCameraView.swift
-│   ├── ReceiptScannerView.swift
-│   ├── ReceiptOCRService.swift
-│   ├── ReceiptMatchingView.swift
-│   └── ReceiptAlias.swift
-│
-├── Prices
-│   ├── PriceRecord.swift
-│   ├── PriceCatalogView.swift
-│   └── ProductPriceDetailView.swift
-│
-├── Supporting Services
-│   ├── ProductImageCache.swift
-│   ├── StoreNameNormalizer.swift
-│   └── ArchiveRepairService.swift
-│
-├── UI
-│   ├── PantryTheme.swift
-│   ├── ProductUIComponents.swift
-│   └── SettingsView.swift
-│
-└── PrivacyInfo.xcprivacy
+├── PantryBuddy.xcodeproj/
+├── PrivacyInfo.xcprivacy
+├── README.md
+└── PantryBuddy/
+    ├── Assets.xcassets/
+    ├── PantryBuddyApp.swift
+    ├── ContentView.swift
+    ├── Product.swift
+    ├── PriceRecord.swift
+    ├── ReceiptAlias.swift
+    ├── PantryView.swift
+    ├── ProductDetailView.swift
+    ├── KnownProductView.swift
+    ├── ManualProductEntryView.swift
+    ├── ShoppingListView.swift
+    ├── BarcodeScannerView.swift
+    ├── OpenFoodFactsService.swift
+    ├── ProductPhotoCameraView.swift
+    ├── ProductImageCache.swift
+    ├── InventoryTrackingComponents.swift
+    ├── ProductExpirationService.swift
+    ├── ProductExpirationComponents.swift
+    ├── ReceiptCameraView.swift
+    ├── ReceiptScannerView.swift
+    ├── ReceiptOCRService.swift
+    ├── ReceiptMatchingView.swift
+    ├── PriceCatalogView.swift
+    ├── ProductPriceDetailView.swift
+    ├── ProductMergeService.swift
+    ├── StoreNameNormalizer.swift
+    ├── ArchiveRepairService.swift
+    ├── SettingsView.swift
+    ├── PantryTheme.swift
+    └── ProductUIComponents.swift
 ```
 
-The exact organization may evolve as development continues.
+Views handle presentation and user interaction, while dedicated services handle recognition, normalization, image caching, expiration reminders, merging, and archive repair.
 
----
+## Privacy and Offline Use
 
-## Design Goals
+PantryBuddy does not require an in-app account and currently has no cloud synchronization.
 
-PantryBuddy is being developed around a few core principles.
+- Inventory and price records are stored locally.
+- Receipt OCR runs on the device.
+- Personal product photos are stored locally.
+- Expiration reminders use local notifications.
+- Barcode lookups send the scanned barcode to Open Food Facts.
+- Loading uncached remote images requires requests to their image hosts.
 
-### Native iOS Experience
+Existing local records and personal photos can be used offline. Product lookups and downloads of uncached images require an internet connection.
 
-The interface is built using SwiftUI and is designed to feel consistent with the rest of the iOS ecosystem.
+The project includes a `PrivacyInfo.xcprivacy` manifest.
 
-### Low-Friction Product Entry
+Exported backups contain personal inventory and purchase information, so they should be stored and shared carefully.
 
-Adding a product should require as little manual work as possible.
+## Build and Run
 
-Barcode scanning and external product information are therefore used whenever possible.
+### Requirements
 
-### Local Processing
+- A Mac with Xcode.
+- An iOS SDK compatible with the project.
+- An iPhone running **iOS 17.6 or later**, or a compatible simulator.
+- Code signing configured for physical-device installation.
 
-Whenever practical, information is processed directly on the device.
+The current development environment uses **Xcode 26.6** and **Swift 6 language mode**.
 
-In particular, receipt OCR does not require a paid cloud-based AI service.
+Use a physical iPhone to test barcode scanning and camera-based workflows.
 
-### Human-Correctable Automation
+### Installation
 
-Information extracted automatically is not assumed to be perfect.
-
-Users remain able to review and correct product information, OCR results, receipt matches, and other automatically generated data.
-
-### Extensibility
-
-Scanning, OCR, inventory management, price tracking, and product matching are implemented as separate components so that they can evolve independently as the application grows.
-
----
-
-## Privacy
-
-PantryBuddy is designed with privacy in mind.
-
-Sensitive operations such as receipt text recognition can be performed using native on-device technologies rather than uploading receipt images to an external AI service.
-
-The project also includes an iOS privacy manifest:
-
-```text
-PrivacyInfo.xcprivacy
-```
-
-Camera access is required for functionality such as barcode scanning, product photography, and receipt capture.
-
----
-
-## Requirements
-
-To build the project you need:
-
-- macOS
-- Xcode
-- a recent iOS SDK
-- an iPhone simulator or physical iPhone
-
-Some camera-based functionality may require a physical iPhone to be tested properly.
-
----
-
-## Installation
-
-Clone the repository:
+Clone the repository and open the project:
 
 ```bash
 git clone https://github.com/costafede/PantryBuddy.git
-```
-
-Enter the project directory:
-
-```bash
 cd PantryBuddy
-```
-
-Open the Xcode project:
-
-```bash
 open PantryBuddy.xcodeproj
 ```
 
-Then:
+In Xcode:
 
-1. Select an iPhone simulator or connected physical device.
-2. Configure code signing if required.
-3. Build and run the application from Xcode.
+1. Select the `PantryBuddy` scheme.
+2. Choose a simulator or connected iPhone.
+3. Configure your signing team for a physical device.
+4. Build and run the app.
+5. Grant camera and notification permissions when using the corresponding features.
 
----
+## Current Limitations
 
-## Current Status
+- OCR and product matching can make mistakes and require review.
+- Product lookup coverage depends on Open Food Facts.
+- Price comparisons use saved observations, not current store listings.
+- Expiration tracking uses one date per product, not per batch.
+- The shopping list is local, manual, and excluded from JSON backups.
+- There is no household sharing or cross-device synchronization.
+- Multi-currency support and additional interface languages are not currently implemented.
 
-PantryBuddy is currently under active development.
+## Possible Next Steps
 
-The application already includes the foundations for:
+- Further improvements to receipt parsing and matching.
+- Separate expiration dates for different packages or batches.
+- Shopping-list backup and restore.
+- Optional shopping suggestions based on remaining stock.
+- Price trend charts and additional comparison tools.
+- Household sharing and cross-device synchronization.
+- Additional localization and accessibility refinements.
 
-- pantry management
-- barcode-based product recognition
-- OpenFoodFacts integration
-- manual product entry
-- expiration tracking
-- receipt capture
-- OCR processing
-- receipt-to-product matching
-- price tracking
-- store normalization
-- product image handling
-
-Some workflows and matching algorithms are still being refined.
-
----
-
-## Roadmap
-
-Possible future improvements include:
-
-- Improved receipt parsing and product matching
-- More robust automatic product-name normalization
-- Better handling of quantities and units
-- Advanced price comparison between supermarkets
-- Price trend visualization
-- Shopping list generation
-- Notifications for expiring products
-- Pantry analytics
-- Improved duplicate detection
-- Search and advanced filtering
-- Improved product categorization
-- Import/export functionality
-- Cloud synchronization across devices
-- Enhanced accessibility
-- Additional localization support
-
----
-
-## Motivation
-
-PantryBuddy started as a personal project aimed at solving a practical everyday problem: keeping track of groceries without manually maintaining multiple lists.
-
-It also serves as an exploration of several areas of iOS development, including:
-
-- mobile application architecture
-- camera integration
-- barcode recognition
-- computer vision
-- OCR
-- external API integration
-- local data management
-- information normalization
-- matching algorithms
-- UI/UX design
-
-The project is designed to evolve incrementally, with automation being introduced where it provides clear value while preserving the possibility of manual correction.
-
----
+These are potential directions rather than a committed release schedule.
 
 ## Contributing
 
-PantryBuddy is currently a personal project, but suggestions, feedback, and ideas are welcome.
+PantryBuddy is a personal project. Feedback, bug reports, and improvement suggestions are welcome.
 
-If you find an issue or have an improvement in mind, feel free to open an issue in the repository.
-
----
+When reporting a problem, include the relevant steps, device model, and iOS version. Screenshots are helpful, but remove personal information from receipts and backups before sharing them.
 
 ## Author
 
@@ -394,12 +357,10 @@ Politecnico di Milano
 
 GitHub: [@costafede](https://github.com/costafede)
 
----
+## Acknowledgments
 
-## Disclaimer
+PantryBuddy uses product information from **Open Food Facts** and native Apple frameworks for scanning, text recognition, persistence, and notifications.
 
-PantryBuddy is an independent personal project.
+This is an independent project and is not affiliated with Open Food Facts or any supermarket.
 
-Product information retrieved from OpenFoodFacts depends on the availability and accuracy of data provided by the OpenFoodFacts database.
-
-Receipt OCR and automatic product matching may not always produce perfect results and should therefore be considered assistive features rather than authoritative data sources.
+Product information, receipt recognition, and duplicate suggestions are assistive features. Users should review automatically retrieved or extracted information before relying on it.
